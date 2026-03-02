@@ -638,7 +638,9 @@ class ParticleStack(BaseModel2DTM):
                 output_shape=output_shape,
             )
 
-            filter_stack[indexes] = cumulative_filter
+            filter_stack[indexes] = cumulative_filter.to(
+                filter_stack
+            )
 
         return filter_stack
 
