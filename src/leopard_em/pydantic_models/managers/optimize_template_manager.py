@@ -137,14 +137,16 @@ class OptimizeTemplateManager(BaseModel2DTM):
             with open(all_results_path, "w", encoding="utf-8") as f:
                 f.write("Pixel Size (Å),SNR\n")
 
-            optimal_template_px = self.optimize_pixel_size(
-                all_results_path,
-                output_text_path,
-                write_individual_csv,
-                min_snr,
-                best_n,
-                consecutive_threshold,
-            )
+            with torch.inference_mode():
+                optimal_template_px = self.optimize_pixel_size(
+                    all_results_path,
+                    output_text_path,
+                    write_individual_csv,
+                    min_snr,
+                    best_n,
+                    consecutive_threshold,
+                )
+
             print(f"Optimal template px: {optimal_template_px:.3f} Å")
             # print this to the text file
             with open(output_text_path, "w", encoding="utf-8") as f:
@@ -198,7 +200,7 @@ class OptimizeTemplateManager(BaseModel2DTM):
         consecutive_decreases = 0
         consecutive_threshold_coarse = 2
         previous_snr = float("-inf")
-        for px in coarse_px_values:
+        for i, px in enumerate(coarse_px_values):
             snr = self.evaluate_template_px(
                 px=px.item(),
                 output_text_path=output_text_path,
@@ -226,6 +228,10 @@ class OptimizeTemplateManager(BaseModel2DTM):
                     )
                     break
             previous_snr = snr
+
+            # every 5 iterations, clear out freed tensor
+            if (i + 1) % 5 == 0:
+                torch.cuda.empty_cache()
 
         if self.pixel_size_fine_search.enabled:
             pixel_size_offsets_fine = self.pixel_size_fine_search.pixel_size_values
@@ -307,6 +313,7 @@ class OptimizeTemplateManager(BaseModel2DTM):
             print(f"Saved result to {csv_path}")
 
         mean_snr = self.results_to_snr(result, min_snr=min_snr, best_n=best_n)
+
         return mean_snr
 
     def get_correlation_result(
