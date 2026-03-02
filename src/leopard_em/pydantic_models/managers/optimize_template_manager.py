@@ -19,6 +19,9 @@ from leopard_em.pydantic_models.data_structures import ParticleStack
 from leopard_em.pydantic_models.formats import REFINED_DF_COLUMN_ORDER
 from leopard_em.pydantic_models.utils import setup_particle_backend_kwargs
 
+def memory_stats():
+    print(torch.cuda.memory_allocated()/1024**2)
+    print(torch.cuda.memory_cached()/1024**2)
 
 class OptimizeTemplateManager(BaseModel2DTM):
     """Model holding parameters necessary for running the optimize template program.
@@ -229,6 +232,9 @@ class OptimizeTemplateManager(BaseModel2DTM):
                     break
             previous_snr = snr
 
+            print("Memory stats after iteration:")
+            memory_stats()
+            print("-" * 50)
             # every 5 iterations, clear out freed tensor
             if (i + 1) % 5 == 0:
                 torch.cuda.empty_cache()
